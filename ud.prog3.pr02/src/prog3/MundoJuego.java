@@ -1,5 +1,8 @@
 package prog3;
 
+import java.util.Date;
+import java.util.ArrayList;
+
 import javax.swing.JPanel;
 
 /** "Mundo" del juego del coche.
@@ -11,6 +14,11 @@ import javax.swing.JPanel;
 public class MundoJuego {
 	private JPanel panel;  // panel visual del juego
 	CocheJuego miCoche;    // Coche del juego
+	EstrellaJuego objEstrella;
+	ArrayList<EstrellaJuego> listaEstrellas = new ArrayList<EstrellaJuego>();
+	
+	int numChoques=0;
+	int numEstrellasQuitadas=0;
 	
 	/** Construye un mundo de juego
 	 * @param panel	Panel visual del juego
@@ -108,4 +116,164 @@ public class MundoJuego {
 		return vel + (acel*tiempo);
 	}
 	
+	/** calcular la fuerza de rozamiento partiendo de la masa, la velocidad y los coeficientes 
+	 * @param masa		La masa del coche en Kg
+	 * @param coefRozSuelo		El rozamiento del coche con el suelo
+	 * @param coefRozAire	El rozamiento del coche con el aire
+	 * @param vel	La velocidad del coche
+	 * @return	los rozamientos del coche tanto con el aire como con el suelo
+	 */
+	public double calcFuerzaRozamiento( double masa, double coefRozSuelo, double coefRozAire, double vel ) {
+		double fuerzaRozamientoAire = coefRozAire * (-vel); // En contra del movimiento
+		double fuerzaRozamientoSuelo = masa * coefRozSuelo * ((vel>0)?(-1):1); // Contra mvto
+		return fuerzaRozamientoAire + fuerzaRozamientoSuelo;
+	}
+	
+	/** calcular la aceleración partiendo de la fuerza del motor
+	 * @param masa		La masa del coche en Kg
+	 * @param fuerza		El rozamiento del coche con el suelo
+	 * @return	la aceleración
+	 */
+	public double calcAceleracionConFuerza( double fuerza, double masa ) {
+		// 2ª ley de Newton: F = m*a ---> a = F/m
+		return fuerza/masa;
+	}
+	
+	/** para poder aplicar la fuerza al coche. Observa cómo si no hay fuerza externa, la única fuerza que se aplica es la de rozamiento hasta que el coche se para
+	 * @param coche		El objeto del coche
+	 * @param fuerza		La fuerza que hace el motor
+	 * @return	no devuelve nada
+	 */
+	public  void aplicarFuerza( double fuerza, Coche coche ) {		
+		double fuerzaRozamiento = calcFuerzaRozamiento( coche.getMasa() ,coche.getCoefSuelo(), coche.getCoefAire(), coche.getVelocidad() );
+		double aceleracion = calcAceleracionConFuerza( fuerza+fuerzaRozamiento, coche.getMasa());
+		if (fuerza==0) {
+		// No hay fuerza, solo se aplica el rozamiento
+		double velAntigua = coche.getVelocidad();
+		coche.acelera( aceleracion, 0.04 );
+		if (velAntigua>=0 && coche.getVelocidad()<0
+		|| velAntigua<=0 && coche.getVelocidad()>0) {
+		coche.setVelocidad(0); // Si se está frenando, se para (no anda al revés)
+		}
+		} else {
+		coche.acelera( aceleracion, 0.04 );
+		}
+	}
+	
+	public EstrellaJuego getEstrella(){
+		return objEstrella;
+	}
+	
+	
+	/** Si han pasado más de 1,2 segundos desde la última,
+	* crea una estrella nueva en una posición aleatoria y la añade al mundo y al panel visual */
+	public void creaEstrella(double valorAleatorioX, double valorAleatorioY){
+	
+		Date ahora=new Date();
+		//Hacer un if haciendo : if(tiempoEstrella -(tiempoEstrella+2)==-2){ algo asi...
+		
+		//Creamos 
+		objEstrella = new EstrellaJuego(ahora, valorAleatorioX, valorAleatorioY);
+		
+		//Sumamos las estrellas que vamos creando al array
+		listaEstrellas.add(objEstrella);
+		
+		//Vamo cambiando la posición en la que tiene que salir la estrella
+		objEstrella.setPos(valorAleatorioX,valorAleatorioY);
+		
+		//Sumamos la estrella al panel
+		panel.add(objEstrella.getGrafico());  // Añade al panel visual
+		
+		objEstrella.getGrafico().repaint();
+		
+
+	}
+	
+	
+	
+	
+	/** Quita todas las estrellas que lleven en pantalla demasiado tiempo
+	* y rota 10 grados las que sigan estando
+	* @param maxTiempo Tiempo máximo para que se mantengan las estrellas (msegs)
+	* @return Número de estrellas quitadas */
+	public int quitaYRotaEstrellas( long maxTiempo ){
+		
+		
+		
+		for(int i=0 ; i <listaEstrellas.size(); i++){
+			
+			EstrellaJuego objetoEstrella= new EstrellaJuego();
+			objetoEstrella= listaEstrellas.get(i);
+			
+			//Fecha en el que se ha guardado el objeto de esa estrella
+			Date fecha = objetoEstrella.getAhora();
+			long milliseconds = fecha.getTime();
+			
+			//Fecha del momento
+			Date fechaAhora=new Date();
+			long milliseconds2 = fechaAhora.getTime();
+			
+				//Si entre la fecha actual y la fecha de creación han pasado más de maxTiempo(6 segundos)
+				if(milliseconds2-milliseconds >=maxTiempo){
+					
+					//Borrar la estrella del array
+					listaEstrellas.remove(objetoEstrella);
+					
+					//Borrar la estrella del panel
+					panel.remove(objetoEstrella.getGrafico());
+					
+					//Actualizar el panel
+					panel.repaint();
+					
+						numEstrellasQuitadas ++;
+				
+				} else {
+					//Codificar para que gire la estrella
+					//objetoEstrella.setGiro(10);
+					
+				}
+		}
+		
+			return numEstrellasQuitadas;
+			
+	}
+	
+	/** Calcula si hay choques del coche con alguna estrella (o varias). Se considera el choque si
+	* se tocan las esferas lógicas del coche y la estrella. Si es así, las elimina.
+	* @return Número de estrellas eliminadas
+	*/
+	public int choquesConEstrellas(){
+				
+		for(int i=0 ; i <listaEstrellas.size(); i++){
+			
+			EstrellaJuego objetoEstrella= new EstrellaJuego();
+			objetoEstrella= listaEstrellas.get(i);
+			
+			//Obtener las posiciones del objeto de Estrella
+			double posXEstrella = objetoEstrella.getPosX();
+			double posYEstrella = objetoEstrella.getPosY();
+			
+			//Obtener las posiciones del objeto de Coche
+			double posXCoche = miCoche.getPosX();
+			double posYCoche = miCoche.getPosY();
+			
+				//Si la posición del coche y la posición de la estrella es la misma
+				if(posXCoche -posXEstrella >=-35 && posXCoche -posXEstrella <=35 && posYCoche -posYEstrella >=-35 && posYCoche -posYEstrella <=35  ){
+					
+					//Borrar la estrella del array
+					listaEstrellas.remove(objetoEstrella);
+					
+					//Borrar la estrella del panel
+					panel.remove(objetoEstrella.getGrafico());
+					
+					//Actualizar el panel
+					panel.repaint();
+					
+					numChoques ++;
+				
+				} 
+		}
+		return numChoques;
+	}
+
 }

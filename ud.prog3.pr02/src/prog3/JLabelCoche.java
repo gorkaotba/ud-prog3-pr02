@@ -8,6 +8,7 @@ import java.awt.RenderingHints;
 import javax.swing.ImageIcon;
 import javax.swing.JLabel;
 
+
 /** Clase para visualizar un coche en Swing como un JLabel,
  *  con un gráfico específico de coche
  * @author Andoni Eguíluz
@@ -25,7 +26,7 @@ public class JLabelCoche extends JLabel {
 		// 		super( new ImageIcon( "bin/ud/prog3/pr00/coche.png" ) );
 		// Esto se hace para acceder tanto por recurso (jar) como por fichero
 		try {
-			setIcon( new ImageIcon( JLabelCoche.class.getResource( "img/coche.png" ).toURI().toURL() ) );
+			setIcon( new ImageIcon( JLabelCoche.class.getResource( "coche.png" ).toURI().toURL() ) );
 		} catch (Exception e) {
 			System.err.println( "Error en carga de recurso: coche.png no encontrado" );
 			e.printStackTrace();
